@@ -1,0 +1,46 @@
+import time
+import math
+
+def check_dataset(rows):
+    if not isinstance(rows,list) or not 1<=len(rows)<=50: raise ValueError('Dataset must contain 1–50 cases.')
+    ids=set()
+    for row in rows:
+        if not isinstance(row,dict) or not isinstance(row.get('id'),str) or not row['id'] or row['id'] in ids: raise ValueError('Cases need unique nonempty string IDs.')
+        ids.add(row['id'])
+        if not isinstance(row.get('input'),str) or len(row['input'])>10000: raise ValueError('Each case needs an input string of at most 10,000 characters.')
+        if 'expected' not in row and not row.get('contains'): raise ValueError('Each case needs expected text or contains assertions.')
+        if 'expected' in row and not isinstance(row['expected'],str): raise ValueError('Expected output must be text.')
+        if 'contains' in row and (not isinstance(row['contains'],list) or not row['contains'] or any(not isinstance(x,str) or not x for x in row['contains'])): raise ValueError('contains must be a nonempty array of nonempty strings.')
+        if 'outputs' in row and (not isinstance(row['outputs'],dict) or any(not isinstance(x,str) for x in row['outputs'].values())): raise ValueError('Replay outputs must map prompt names to text.')
+    return rows
+
+def score(row,output):
+    checks=[]
+    if 'expected' in row: checks.append({'name':'exact_match','passed':output.strip()==row['expected'].strip()})
+    for phrase in row.get('contains',[]): checks.append({'name':'contains: '+phrase,'passed':phrase in output})
+    return {'passed':all(c['passed'] for c in checks),'checks':checks}
+
+def evaluate(rows,prompt,provider,input_price=0,output_price=0):
+    check_dataset(rows)
+    for value in (input_price,output_price):
+        if type(value) not in (float,int) or not math.isfinite(value) or value<0: raise ValueError('Token prices must be finite nonnegative numbers.')
+    results=[]
+    for row in rows:
+        started=time.perf_counter()
+        try:
+            answer=provider(prompt['template'].replace('{input}',row['input']),row,prompt)
+            text=answer['text']
+            if not isinstance(text,str): raise ValueError('Provider returned a non-text output.')
+            judged=score(row,text)
+            usage=answer.get('usage')
+            cost=(usage['input_tokens']*input_price+usage['output_tokens']*output_price)/1_000_000 if usage else None
+            results.append({'id':row['id'],'output':text,**judged,'latency_ms':round((time.perf_counter()-started)*1000,2),'usage':usage,'estimated_cost_usd':cost,'error':None})
+        except Exception as error:
+            results.append({'id':row['id'],'output':'','passed':False,'checks':[],'latency_ms':round((time.perf_counter()-started)*1000,2),'usage':None,'estimated_cost_usd':None,'error':str(error)[:300]})
+    latencies=sorted(r['latency_ms'] for r in results)
+    return {'prompt':prompt,'cases':results,'pass_rate':sum(r['passed'] for r in results)/len(results),'error_count':sum(bool(r['error']) for r in results),'mean_latency_ms':sum(latencies)/len(latencies),'p95_latency_ms':latencies[max(0,math.ceil(.95*len(latencies))-1)],'estimated_cost_usd':sum(r['estimated_cost_usd'] for r in results) if all(r['estimated_cost_usd'] is not None for r in results) else None}
+
+def replay_provider(text,row,prompt):
+    outputs=row.get('outputs',{})
+    if prompt['name'] not in outputs: raise ValueError('No recorded output for prompt '+prompt['name'])
+    return {'text':outputs[prompt['name']]}

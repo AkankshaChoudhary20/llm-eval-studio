@@ -1,0 +1,20 @@
+[
+  {
+    "id": "capital",
+    "input": "What is the capital of France? Answer with the city only.",
+    "expected": "Paris",
+    "outputs": {
+      "baseline": "The capital is Paris.",
+      "concise": "Paris"
+    }
+  },
+  {
+    "id": "math",
+    "input": "What is 2 + 2? Answer with the number only.",
+    "expected": "4",
+    "outputs": {
+      "baseline": "4",
+      "concise": "4"
+    }
+  }
+]

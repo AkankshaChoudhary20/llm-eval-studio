@@ -1,0 +1,5 @@
+{
+  "name": "concise",
+  "version": 1,
+  "template": "Answer concisely: {input}"
+}
