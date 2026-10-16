@@ -32,4 +32,13 @@ class CoreTests(unittest.TestCase):
         self.assertEqual(result['estimated_cost_usd'], 0)
         self.assertEqual(result['error_count'], 0)
 
+    def test_exception_without_message_still_counts_as_error(self):
+        def provider(*args):
+            raise RuntimeError()
+        result = evaluate(self.rows, self.prompt, provider)
+        self.assertEqual(result['error_count'], 2)
+        self.assertEqual(result['pass_rate'], 0)
+        self.assertTrue(all(case['error'] == 'RuntimeError' for case in result['cases']))
+        self.assertIsNone(result['estimated_cost_usd'])
+
 if __name__=='__main__':unittest.main()
