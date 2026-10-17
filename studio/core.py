@@ -22,6 +22,8 @@ def score(row,output):
 
 def evaluate(rows,prompt,provider,input_price=0,output_price=0):
     check_dataset(rows)
+    if not isinstance(prompt,dict) or not isinstance(prompt.get('name'),str) or not prompt['name'].strip() or not isinstance(prompt.get('template'),str):
+        raise ValueError('Prompt needs a nonempty name and a text template.')
     for value in (input_price,output_price):
         if type(value) not in (float,int) or not math.isfinite(value) or value<0: raise ValueError('Token prices must be finite nonnegative numbers.')
     results=[]
@@ -47,3 +49,4 @@ def replay_provider(text,row,prompt):
     outputs=row.get('outputs',{})
     if prompt['name'] not in outputs: raise ValueError('No recorded output for prompt '+prompt['name'])
     return {'text':outputs[prompt['name']]}
+
