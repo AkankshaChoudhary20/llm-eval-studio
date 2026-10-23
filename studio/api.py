@@ -55,9 +55,11 @@ def execute(path,id,dataset,prompts,mode,input_price,output_price,invoke):
     finally:LOCK.release()
 @app.post('/api/runs')
 async def start(request:Request,tasks:BackgroundTasks):
-    data=await body(request);dataset=store.get(DB,data.get('dataset_id'));ids=data.get('prompt_ids')
+    data=await body(request);dataset_id=data.get('dataset_id');ids=data.get('prompt_ids')
+    if type(dataset_id) is not int or not 1<=dataset_id<=2**63-1:raise ValueError('Dataset ID must be a positive SQLite integer.')
+    dataset=store.get(DB,dataset_id)
     if not dataset or dataset['kind']!='dataset':raise ValueError('Select a saved dataset.')
-    if not isinstance(ids,list) or not 1<=len(ids)<=3 or any(type(id) is not int for id in ids) or len(set(ids))!=len(ids):raise ValueError('Select 1–3 distinct prompt versions.')
+    if not isinstance(ids,list) or not 1<=len(ids)<=3 or any(type(id) is not int or not 1<=id<=2**63-1 for id in ids) or len(set(ids))!=len(ids):raise ValueError('Select 1–3 distinct prompt versions.')
     prompts=[store.get(DB,id) for id in ids]
     if any(not p or p['kind']!='prompt' for p in prompts):raise ValueError('Prompt not found.')
     mode=data.get('provider','replay');invoke=provider(mode)
