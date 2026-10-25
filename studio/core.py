@@ -25,7 +25,7 @@ def evaluate(rows,prompt,provider,input_price=0,output_price=0):
     if not isinstance(prompt,dict) or not isinstance(prompt.get('name'),str) or not prompt['name'].strip() or not isinstance(prompt.get('template'),str):
         raise ValueError('Prompt needs a nonempty name and a text template.')
     for value in (input_price,output_price):
-        if type(value) not in (float,int) or not math.isfinite(value) or value<0: raise ValueError('Token prices must be finite nonnegative numbers.')
+        if type(value) not in (float,int) or value < 0 or value > 1.7976931348623157e308 or not math.isfinite(value): raise ValueError('Token prices must be finite nonnegative numbers.')
     results=[]
     for row in rows:
         started=time.perf_counter()
