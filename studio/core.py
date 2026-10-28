@@ -38,7 +38,8 @@ def evaluate(rows,prompt,provider,input_price=0,output_price=0):
             if usage is not None:
                 if not isinstance(usage,dict) or any(type(usage.get(key)) is not int or usage[key] < 0 for key in ('input_tokens','output_tokens')):
                     raise ValueError('Provider usage must contain nonnegative integer token counts.')
-            cost=(usage['input_tokens']*input_price+usage['output_tokens']*output_price)/1_000_000 if usage else None
+            # Scale token counts first to avoid intermediate overflow or price underflow.
+            cost=((usage['input_tokens']/1_000_000)*input_price+(usage['output_tokens']/1_000_000)*output_price) if usage else None
             if cost is not None and not math.isfinite(cost):
                 raise ValueError('Estimated cost must be finite.')
             results.append({'id':row['id'],'output':text,**judged,'latency_ms':round((time.perf_counter()-started)*1000,2),'usage':usage,'estimated_cost_usd':cost,'error':None})
