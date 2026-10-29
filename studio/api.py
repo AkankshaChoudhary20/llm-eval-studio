@@ -65,7 +65,7 @@ async def start(request:Request,tasks:BackgroundTasks):
     mode=data.get('provider','replay');invoke=provider(mode)
     prices=[data.get('input_price',0),data.get('output_price',0)]
     import math
-    if any(type(p) not in (int,float) or not math.isfinite(p) or p<0 for p in prices):raise ValueError('Prices must be finite nonnegative numbers.')
+    if any(type(p) not in (int,float) or p<0 or p>1.7976931348623157e308 or not math.isfinite(p) for p in prices):raise ValueError('Prices must be finite nonnegative numbers.')
     if not LOCK.acquire(blocking=False):raise HTTPException(429,'A batch is already running.')
     try:id=store.create_run(DB,{'provider':mode,'dataset_id':dataset['id'],'prompt_ids':ids})
     except Exception:LOCK.release();raise
