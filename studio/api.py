@@ -3,7 +3,7 @@ import os
 import threading
 from pathlib import Path
 from contextlib import asynccontextmanager
-from fastapi import FastAPI,HTTPException,Request,BackgroundTasks
+from fastapi import FastAPI,HTTPException,Request,BackgroundTasks,Path as PathParam
 from fastapi.responses import FileResponse,JSONResponse
 from fastapi.staticfiles import StaticFiles
 from .core import check_dataset,evaluate
@@ -41,7 +41,7 @@ async def prompt(request:Request):
 @app.get('/api/runs')
 def runs():return store.runs(DB)
 @app.get('/api/runs/{id}')
-def run(id:int):
+def run(id:int=PathParam(ge=1,le=2**63-1)):
     saved=store.run(DB,id)
     if not saved:raise HTTPException(404,'Run not found.')
     return saved
